@@ -8,7 +8,7 @@ export const router = express.Router();
 
 
 
-
+ 
 router.get("/", (req, res) => {
   conn.query("select * from User", (err, result, fields) => {
     res.json(result);
@@ -16,24 +16,18 @@ router.get("/", (req, res) => {
 });
 
 
+  
 
-
-router.get("/idx", (req, res) => {
-  // conn.query("select * from Users where id = " + req.query.id, (err, result, fields)=>{
-  //   res.json(result);
-  // })
-  if (req.query.id) {
+router.get("/:id", (req, res) => {
     conn.query(
-      "select * from User where id = " + req.query.id,
+      "select * from User where id = " +req.params.id,
       (err, result, fields) => {
         res.json(result);
       }
     );
-  } else {
-    res.send("call get in Users with Query Param " + req.query.id);
   }
   //   res.json("this is Users page")
-});
+  );
 
 
 router.post("/",(req, res) => {
@@ -68,7 +62,7 @@ router.put("/edit/:id", async (req, res) => {
   const rawData = JSON.parse(JSON.stringify(result));
   console.log(rawData);
   userOriginal = rawData[0] as UserPostRequest;
-  console.log(userOriginal);
+  console.log(userOriginal); 
 
   let updateUser = { ...userOriginal, ...user };
   console.log(user);

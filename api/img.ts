@@ -5,6 +5,7 @@ import { conn } from '../connectdb'
 import path from "path";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebasecon";
+import { PicturePostRequest } from "../model/picturePostRequest";
 
 
 
@@ -28,11 +29,57 @@ class FileMiddleware {
   });
 }
 
-router.get("/",(req, res)=>{
-  res.send("testkub")
-})
-
 const fileUpload = new FileMiddleware();
+
+
+router.get("/", (req, res) => {
+  conn.query("select * from img", (err, result, fields) => {
+    res.json(result);
+  });
+});
+
+router.get("/:id", (req, res) => {
+  if (req.query.id) {
+    res.send("call get in Pictures with Query Param " + req.query.id);
+  } else {
+    conn.query(
+      "select * from Pictures where id = " + req.params.id,
+      (err, result, fields) => {
+        res.json(result);
+      }
+    );
+  }
+  //   res.json("this is Users page")
+});
+
+
+router.get("/uid/:id", (req, res) => {
+  if (req.query.id) {
+    res.send("call get in Pictures with Query Param " + req.query.id);
+  } else {
+    conn.query(
+      "select * from img where Uid = " + req.params.id,
+      (err, result, fields) => {
+        res.json(result);
+      }
+    );
+  }
+}); 
+ 
+router.post("/add", (req, res) => {
+  let picture: PicturePostRequest = req.body;
+  let sql = "INSERT INTO `img`(`Uid`,`name`,`path`) VALUES (?,?,?)";
+
+  sql = mysql.format(sql, [picture.Uid,  picture.name ,picture.path]);
+
+  conn.query(sql, (err, result) => {
+    if (err) throw err;
+    res
+      .status(201)
+      .json({ affected_row: result.affectedRows, last_idx: result.insertId });
+  });
+});
+
 
 router.post(
   "/",
