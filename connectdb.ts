@@ -6,3 +6,4 @@ export const conn = mysql.createPool({
     password: "64011212211@csmsu",
     database: "web65_64011212211",
   })
+ 

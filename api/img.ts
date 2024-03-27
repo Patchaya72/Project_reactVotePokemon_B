@@ -67,10 +67,11 @@ router.get("/uid/:id", (req, res) => {
 }); 
  
 router.post("/add", (req, res) => {
+  let score=0;
   let picture: PicturePostRequest = req.body;
-  let sql = "INSERT INTO `img`(`Uid`,`name`,`path`) VALUES (?,?,?)";
+  let sql = "INSERT INTO `img`(`Uid`,`name`,`path`,`score`) VALUES (?,?,?,?)";
 
-  sql = mysql.format(sql, [picture.Uid,  picture.name ,picture.path]);
+  sql = mysql.format(sql, [picture.Uid,  picture.name ,picture.path,score]);
 
   conn.query(sql, (err, result) => {
     if (err) throw err;
@@ -99,6 +100,23 @@ router.post(
   }
 );
 
+///แก้ไข img   เสร็จแล้ว
+router.put("/edit/:id", async (req, res) => {
+  let id = +req.params.id;
+  let vote: PicturePostRequest = req.body;
+
+  let sql =
+    "update  `img` set `score`=? where `id`=? ";
+  sql = mysql.format(sql, [
+      vote.score,
+    id,
+  ]);
+  conn.query(sql, (err, result) => {
+    if (err) throw err;
+    res.status(201).json({ affected_row: result.affectedRows });
+  });
+});
+
 async function firebaseUpload(file: Express.Multer.File) {
   // Upload to firebase storage
   const filename = Date.now() + "-" + Math.round(Math.random() * 1000) + ".png";
@@ -117,3 +135,75 @@ async function firebaseUpload(file: Express.Multer.File) {
 
   return url;
 }
+
+router.get("/rankYesterday/get", (req, res) => {
+  conn.query(
+    `SELECT img.name, img.path, img.id, vote.score ,vote.date
+    FROM vote
+    JOIN img ON vote.ImgID = img.id
+    WHERE  vote.date = DATE_FORMAT(NOW() - INTERVAL 1 DAY, '%d')
+    AND img.id NOT IN (
+        SELECT img.id
+        FROM vote
+        JOIN img ON vote.ImgID = img.id
+        WHERE vote.date = DATE_FORMAT(NOW() ,'%d')
+        GROUP BY img.id
+    )
+    ORDER BY vote.score DESC;
+    `,
+    (err, result, fields) => {
+      res.status(200).json(result);
+    }
+  );
+});
+
+router.get("/rankToday/get", (req, res) => {
+  conn.query(
+    `SELECT img.name, img.path, img.id, vote.score ,vote.date
+    FROM vote
+    JOIN img ON vote.ImgID = img.id
+    WHERE vote.date = DATE_FORMAT(NOW(), '%d')
+    OR vote.date = DATE_FORMAT(NOW() - INTERVAL 1 DAY, '%d')
+    AND img.id NOT IN (
+        SELECT img.id
+        FROM vote
+        JOIN img ON vote.ImgID = img.id
+        WHERE vote.date = DATE_FORMAT(NOW(), '%d')
+        GROUP BY img.id
+    )
+    ORDER BY vote.score DESC;
+    `,
+    (err, result, fields) => {
+      res.status(200).json(result);
+    }
+  );
+});
+
+router.get("/Graph/:id", (req, res) => {
+  let id = +req.params.id;
+  conn.query(
+    `SELECT
+      vote.id, vote.score, vote.ImgID, vote.date
+    FROM
+      vote
+    WHERE
+      vote.ImgID = ? AND
+      vote.date >= DATE_FORMAT(NOW() - INTERVAL 7 DAY, '%d')
+    ORDER BY
+      vote.date
+    LIMIT 7;`,
+    [id],
+    (err, result, fields) => {
+      if (err) { 
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+        return;
+      }
+      res.json(result);
+    }
+  );
+});
+
+
+
+

@@ -2,16 +2,17 @@ import express from "express";
 import { conn } from "../connectdb";
 import { VotePostRequest } from "../model/votePostRequest";
 import mysql from "mysql";
-import util from "util";
 
 export const router = express.Router();
 
 
   ///เสร็จแล้ว  ดึงข้อมูลทั้งหมด
 router.get('/', (req, res)=>{
-    res.send('Get in vote.ts');
+  conn.query("select * from vote", (err, result, fields) => {
+    res.json(result);
+  });
 });
-
+       
  ///ค้นหา vote id    เสร็จแล้ว
 router.get("/vote/:id", (req, res) => {
     if (req.query.id) {
@@ -20,14 +21,12 @@ router.get("/vote/:id", (req, res) => {
       conn.query(
         "select * from vote where ImgID = " + req.params.id,
         (err, result, fields) => {
-          res.json({
-            result: result
-          });
-        }
+          res.json(result);
+        } 
       );
     }
-  }); 
-
+  });  
+ 
   ///เพิ่ม vote   เสร็จแล้ว
   router.post("/add", (req, res) => {
     let vote: VotePostRequest = req.body;
@@ -51,10 +50,10 @@ router.get("/vote/:id", (req, res) => {
     
     // สร้างสตริงเพื่อแสดงวันที่ในรูปแบบ "วัน/เดือน/ปี"
     const dateString: string = `${day}`;
-    
+     
     return dateString;
   }
-  
+    
   // เรียกใช้งานฟังก์ชัน getCurrentDate
   const currentDate: string = getCurrentDate();
   console.log(currentDate); // ผลลัพธ์: วันที่ปัจจุบัน "25"
@@ -65,17 +64,18 @@ router.get("/vote/:id", (req, res) => {
     let vote: VotePostRequest = req.body;
   
     let sql =
-      "update  `vote` set `score`=? where `ImgID`=?";
+      "update  `vote` set `score`=? where `ImgID`=? and `date`=?";
     sql = mysql.format(sql, [
         vote.score,
       id,
+      currentDate,
     ]);
     conn.query(sql, (err, result) => {
       if (err) throw err;
       res.status(201).json({ affected_row: result.affectedRows });
     });
   });
-
+ 
   /// ลบ vote  เสร็จแล้ว
   router.delete("/delete/:id", async (req, res) => {
     try {
