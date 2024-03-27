@@ -3,11 +3,11 @@ import multer from "multer";
 import mysql from 'mysql'
 import { conn } from '../connectdb'
 import path from "path";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { storage } from "../firebasecon";
 import { PicturePostRequest } from "../model/picturePostRequest";
 
-
+import util from "util";
 
 
 
@@ -38,12 +38,12 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get("/:id", (req, res) => {
+router.get("/img/:id", (req, res) => {
   if (req.query.id) {
     res.send("call get in Pictures with Query Param " + req.query.id);
   } else {
     conn.query(
-      "select * from Pictures where id = " + req.params.id,
+      "select * from img where id = " + req.params.id,
       (err, result, fields) => {
         res.json(result);
       }
@@ -51,7 +51,7 @@ router.get("/:id", (req, res) => {
   }
   //   res.json("this is Users page")
 });
-
+ 
 
 router.get("/uid/:id", (req, res) => {
   if (req.query.id) {
@@ -116,6 +116,66 @@ router.put("/edit/:id", async (req, res) => {
     res.status(201).json({ affected_row: result.affectedRows });
   });
 });
+
+router.put("/edit/picture/:id", async (req, res) => {
+  let id = +req.params.id;
+  let picture: PicturePostRequest = req.body;
+  let pictureOriginal: PicturePostRequest | undefined;
+  const queryAsync = util.promisify(conn.query).bind(conn);
+
+  let sql = mysql.format("select * from img where id = ?", [id]);
+
+  let result = await queryAsync(sql);
+  const rawData = JSON.parse(JSON.stringify(result));
+  console.log(rawData);
+  pictureOriginal = rawData[0] as PicturePostRequest;
+  console.log(pictureOriginal);
+
+  let updatePicture = { ...pictureOriginal, ...picture };
+  console.log(picture);
+  console.log(updatePicture);
+
+  sql =
+    "update  `img` set `name`=?,`score`=?,`Uid`=?,`path`=? where `id`=?";
+  sql = mysql.format(sql, [
+    updatePicture.name,
+    updatePicture.score,
+    updatePicture.Uid,
+    updatePicture.path,
+    id,
+  ]);
+  conn.query(sql, (err, result) => {
+    if (err) throw err;
+    res.status(201).json({ affected_row: result.affectedRows });
+  });
+});
+
+
+router.delete("/:id", (req, res) => {
+  let id = +req.params.id;
+  conn.query("delete from img where id = ?", [id], (err, result) => {
+    if (err) throw err;
+    res.status(200).json({ affected_row: result.affectedRows });
+  });
+});
+
+router.delete("/paths",async (req, res) => {
+  const path = req.query.path;
+  console.log("In delete func:  "+path);
+  
+  // res.send("Path: "+path)
+  await firebaseDelete(String(path));
+});
+
+async function firebaseDelete(path: string) {
+  console.log("In firebase Delete:"+path);
+  
+  const storageRef = ref(
+    storage,
+    "/images/" + path.split("/images/")[1].split("?")[0]
+  );
+  const snapshost = await deleteObject(storageRef);
+}
 
 async function firebaseUpload(file: Express.Multer.File) {
   // Upload to firebase storage

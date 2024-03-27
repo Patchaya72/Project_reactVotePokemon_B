@@ -77,6 +77,22 @@ router.get("/vote/:id", (req, res) => {
       res.status(201).json({ affected_row: result.affectedRows });
     });
   });
+
+  router.put("/edit/null/:id", (req, res) => {
+    let pictureId = +req.params.id;
+    let vote: VotePostRequest = req.body;
+    let sql =
+      "update  `vote` set `date`= NULL, `ImgID`= NULL, `score`= NULL where `ImgID`=?";
+    sql = mysql.format(sql, [
+      pictureId
+    ]);
+    conn.query(sql, (err, result) => {
+      if (err) throw err;
+      res
+        .status(201)
+        .json({ affected_row: result.affectedRows });
+    });
+  });
  
   /// ลบ vote  เสร็จแล้ว
   router.delete("/delete/:id", async (req, res) => {
